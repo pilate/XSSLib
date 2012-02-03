@@ -2,8 +2,15 @@
 <html>
     <head>
         <title>XSS Lib Test</title>
-        <script src="xsslib.js"></script>
     </head>
     <body>
+        <form method="POST" action="/verify.php">
+            <input type="text" value="Blank" name="Text">
+            <select name="Test">
+                <option>Test</option>
+            </select>
+            <input type="submit">
+        </form>
+        <script src="xsslib.js"></script>
     </body>
 </html>
